@@ -1,0 +1,8 @@
+file(SHA256 "${SOURCE_DIRECTORY}/benchmarks/upstream/PiTime.cpp" upstream_hash)
+file(SHA256 "${SOURCE_DIRECTORY}/benchmarks/local/PiTime.cpp" local_hash)
+if(NOT upstream_hash STREQUAL "f5a6bf554e628eccaa1cb30390be679fc24fcd350159d8ec042537b60068af2e")
+    message(FATAL_ERROR "The formatted upstream benchmark snapshot was modified")
+endif()
+if(NOT local_hash STREQUAL "da9c61bbe912c3ac65537a48631f74a5bac73c12c180a76afd93ff1027499829")
+    message(FATAL_ERROR "The formatted local benchmark snapshot was modified")
+endif()

@@ -1,0 +1,57 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+    "configurePresets": [
+        {
+            "name": "release",
+            "displayName": "Portable optimized build",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/release",
+            "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+        },
+        {
+            "name": "debug",
+            "inherits": "release",
+            "binaryDir": "${sourceDir}/build/debug",
+            "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "PITIME_ENABLE_IPO": "OFF" }
+        },
+        {
+            "name": "native",
+            "inherits": "release",
+            "binaryDir": "${sourceDir}/build/native",
+            "cacheVariables": { "PITIME_NATIVE": "ON" }
+        }
+    ],
+    "buildPresets": [
+        { "name": "release", "configurePreset": "release" },
+        { "name": "debug", "configurePreset": "debug" },
+        { "name": "native", "configurePreset": "native" },
+        {
+            "name": "release-tests",
+            "configurePreset": "release",
+            "targets": ["pitime", "pitime_tests"]
+        },
+        {
+            "name": "debug-tests",
+            "configurePreset": "debug",
+            "targets": ["pitime", "pitime_tests"]
+        },
+        {
+            "name": "native-tests",
+            "configurePreset": "native",
+            "targets": ["pitime", "pitime_tests"]
+        },
+        {
+            "name": "release-benchmark",
+            "configurePreset": "release",
+            "targets": ["pitime_benchmark"]
+        },
+        { "name": "debug-benchmark", "configurePreset": "debug", "targets": ["pitime_benchmark"] },
+        { "name": "native-benchmark", "configurePreset": "native", "targets": ["pitime_benchmark"] }
+    ],
+    "testPresets": [
+        { "name": "release", "configurePreset": "release", "output": { "outputOnFailure": true } },
+        { "name": "debug", "configurePreset": "debug", "output": { "outputOnFailure": true } },
+        { "name": "native", "configurePreset": "native", "output": { "outputOnFailure": true } }
+    ]
+}

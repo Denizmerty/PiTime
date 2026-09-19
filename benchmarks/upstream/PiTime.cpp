@@ -102,14 +102,19 @@
 #include <sstream>
 #include <algorithm>
 
-std::string calculatePiDigitsString(int n) {
-    if (n <= 0) {
+std::string calculatePiDigitsString(
+    int n
+)
+{
+    if (n <= 0)
+    {
         return "3.";
     }
 
     int len = static_cast<int>(std::floor(10.0 * n / 3.0)) + 3;
     std::vector<int> a(len);
-    for (int i = 0; i < len; ++i) {
+    for (int i = 0; i < len; ++i)
+    {
         a[i] = 2;
     }
 
@@ -119,9 +124,11 @@ std::string calculatePiDigitsString(int n) {
     int nines = 0;
     int predigit = 0;
 
-    for (int j = 0; j < n + 3; ++j) {
+    for (int j = 0; j < n + 3; ++j)
+    {
         long long carry = 0;
-        for (int i = len - 1; i > 0; --i) {
+        for (int i = len - 1; i > 0; --i)
+        {
             long long num = (long long)a[i] * 10 + carry;
             a[i] = static_cast<int>(num % (2 * i + 1));
             carry = num / (2 * i + 1) * i;
@@ -130,39 +137,53 @@ std::string calculatePiDigitsString(int n) {
         int q = static_cast<int>(final_num / 10);
         a[0] = static_cast<int>(final_num % 10);
 
-        if (q >= 10) {
+        if (q >= 10)
+        {
             q = 10;
         }
 
-        if (j > 0) {
-            if (q < 9) {
+        if (j > 0)
+        {
+            if (q < 9)
+            {
                 calculated_digits.push_back(predigit);
-                for (int k = 0; k < nines; ++k) {
+                for (int k = 0; k < nines; ++k)
+                {
                     calculated_digits.push_back(9);
                 }
             }
-            else if (q == 10) {
+            else if (q == 10)
+            {
                 calculated_digits.push_back(predigit + 1);
-                for (int k = 0; k < nines; ++k) {
+                for (int k = 0; k < nines; ++k)
+                {
                     calculated_digits.push_back(0);
                 }
             }
         }
 
-        if (q < 9) {
+        if (q < 9)
+        {
             predigit = q;
-            if (j > 0) nines = 0;
+            if (j > 0)
+                nines = 0;
         }
-        else if (q == 9) {
-            if (j > 0) nines++;
-            else predigit = q;
+        else if (q == 9)
+        {
+            if (j > 0)
+                nines++;
+            else
+                predigit = q;
         }
-        else { 
+        else
+        {
             predigit = 0;
-            if (j > 0) nines = 0;
+            if (j > 0)
+                nines = 0;
         }
 
-        if (calculated_digits.size() >= n + 1) {
+        if (calculated_digits.size() >= n + 1)
+        {
             break;
         }
     }
@@ -170,18 +191,20 @@ std::string calculatePiDigitsString(int n) {
     std::stringstream pi_stream;
     pi_stream << "3.";
 
-    int num_decimal_digits_available = (calculated_digits.size() > 0) ? calculated_digits.size() - 1 : 0;
+    int num_decimal_digits_available =
+        (calculated_digits.size() > 0) ? calculated_digits.size() - 1 : 0;
     int digits_to_print = std::min(n, num_decimal_digits_available);
 
-    for (int i = 0; i < digits_to_print; ++i) {
+    for (int i = 0; i < digits_to_print; ++i)
+    {
         pi_stream << calculated_digits[i + 1];
     }
 
     return pi_stream.str();
 }
 
-
-int main() {
+int main()
+{
     const int N = 10000;
 
     auto start_time = std::chrono::high_resolution_clock::now();

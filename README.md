@@ -1,69 +1,160 @@
-# Pi Digit Calculator(Spigot Algorithm)
+# PiTime
 
-This repository contains a C++ program(`PiTime.cpp`) that calculates a specified number of digits of Pi(π) using an efficient **Spigot algorithm**. It prints the result("3." followed by the requested digits) to the console along with the calculation time.
+Calculate pi with exact integer Chudnovsky binary splitting and GMP. The default
+is **10,000 decimal places**, truncated rather than rounded. Precision is a runtime
+option, so changing it does not require recompiling.
 
-## Features
+The original quadratic decimal spigot has been replaced with a rapidly converging
+series, fast multiprecision arithmetic, bounded parallel work, and a single output
+buffer. GMP already implements its critical arithmetic kernels in optimized
+assembly. See [performance results and methodology](docs/performance.md) and the
+[algorithm notes](docs/algorithm.md).
 
-* Calculates Pi to a user-defined number of decimal places(hardcoded as `N` in `main`).
-* Uses an efficient Spigot algorithm for sequential digit generation.
-* Outputs the calculated digits of Pi(starting with "3.") to standard output.
-* Reports the calculation time in milliseconds.
+## Build
 
-## How to Compile and Run
+### Visual Studio: open and run
 
-1. **Prerequisites:** You need a C++ compiler that supports C++11 or later(due to usage of `<chrono>`, `<vector>`, `<string>`, etc.). `g++`(part of the GCC) or `clang++` are common choices. Git should also be installed if you want to clone the repository.
+Open **[PiTime.sln](PiTime.sln)** in Visual Studio 2022 (17.6+) or Visual Studio
+2026 and press the green **Local Windows Debugger** button (F5). The solution has
+one startup project, PiTime. It builds the application and launches it directly.
+Choose **Release | x64** when measuring performance; **Debug | x64** supports
+normal debugging.
 
-2. **Get the Code:**
-   * Clone the repository:
-     ```bash
-     git clone https://github.com/YourUsername/PiTime.git
-     cd PiTime
-     ```
+The installed **Desktop development with C++** workload and its bundled vcpkg
+component are used automatically. The first build restores the pinned GMP
+dependency and its build tools over the internet; later builds reuse the cache.
+This first restore can take several minutes.
+There is no manual GMP installation, CMake generation, PATH editing, or
+`vcpkg integrate install` step. The required GMP DLL is copied next to the
+executable automatically.
 
-3. **Compile:** Open a terminal or command prompt in the directory containing `PiTime.cpp` and run:
-   ```bash
-   # Using g++
-   g++ PiTime.cpp -o PiTime -std=c++11 -O2
+The application is written to
+`build/visual-studio/x64/<Debug-or-Release>/PiTime.exe`. Dependencies and generated
+files stay under ignored `build/`, with vcpkg also using its normal user caches.
+The solution contains no test or benchmark project: **building or running PiTime
+never requires building tests**.
 
-   # Using clang++
-   clang++ PiTime.cpp -o PiTime -std=c++11 -O2
-   ```
-   * `-o PiTime`: Specifies the output executable file name as `PiTime`(or `PiTime.exe` on Windows).  
-   * `-std=c++11`: Ensures C++11 features are enabled.  
-   * `-O2`: Enables optimizations, which can significantly speed up the calculation.
+### PowerShell: interactive build
 
-4. **Run:** Execute the compiled program:
-   ```bash
-   # On Linux/macOS/Git Bash
-   ./PiTime
+Run **[Build.ps1](Build.ps1)** from PowerShell 5.1 or later:
 
-   # On Windows Command Prompt/PowerShell
-   .\PiTime.exe
-   ```
-   The program will then print the digits of Pi and the time taken.
-
-5. **Modify Number of Digits:** To change the number of decimal digits calculated, edit the following line within the `main` function in `PiTime.cpp`:
-   ```c++
-   const int N = 10000; // Change 10000 to your desired number of digits
-   ```
-   After modifying `N`, recompile the program using the command from step 3.
-
-## How it Works: The Spigot Algorithm
-
-This program implements a **Spigot algorithm** to calculate the digits of Pi. Key characteristics of this approach include:
-
-* **Sequential Digit Generation:** Unlike algorithms that compute a full high-precision value first, Spigot algorithms generate digits one by one(or in small batches), like water dripping from a tap(spigot). This makes them memory-efficient for calculating a large number of digits.  
-* **Mixed-Radix Representation:** The algorithm internally represents the state of the calculation using an array(`a` in the code) that functions as digits in a mixed-radix number system. The base for each 'digit' `a[i]` is related to `(2*i + 1)`. This representation is derived from a specific infinite series for Pi.  
-* **Iteration = Digit Extraction:** Each main loop iteration effectively simulates multiplying the current Pi approximation by 10(to shift the next decimal digit). It then normalizes the mixed-radix representation by processing the `a` array, calculating carries, and finally extracting the next potential decimal digit(`q`).  
-* **Nines Buffering:** A critical feature is handling sequences of '9's correctly. Since a later carry operation might turn a sequence like `...4999...` into `...5000...`, the algorithm cannot immediately output a '9'. It buffers the last non-nine digit(`predigit`) and counts consecutive nines(`nines`). The output of these buffered digits is delayed until a digit *other* than 9 arrives, which resolves whether the buffered nines should be printed as `9`s or `0`s(if a carry propagated through them).
-
-For a detailed step-by-step explanation of the algorithm's logic, the specific formula used, and the implementation details, please refer to the comments within the `PiTime.cpp` source file itself.
-
-## Example Output
-
-```bash
-3.1415926535...5779458151
-Calculation took 1234 milliseconds.
+```powershell
+.\Build.ps1
 ```
 
-*Note: The exact digits shown above are truncated for brevity. The calculation time will vary depending on the value of `N` and the performance of the system running the code.*  
+Choose **Release** or **Debug**, then **Build**, **Rebuild**, or **BuildAndRun**.
+Press Enter to accept a default, or Q to cancel. The script finds Visual Studio
+automatically and builds the same application-only solution described above.
+Rebuild recompiles the application while retaining the dependency cache.
+You can invoke the script from any working directory using its full path.
+
+For automation or specific run settings, skip the menus with `-NonInteractive`:
+
+```powershell
+.\Build.ps1 -NonInteractive -Configuration Release
+.\Build.ps1 -NonInteractive -Configuration Debug -Action Rebuild
+.\Build.ps1 -NonInteractive -Action BuildAndRun -Digits 1000000 -Threads 0 -Quiet
+```
+
+BuildAndRun calculates 10,000 decimal places by default. `-Digits`, `-Threads`,
+and `-Quiet` control the application when running it. Failures return a nonzero
+exit code, and a failed build never launches an older executable. Tests and
+benchmarks remain separate opt-in CMake targets.
+
+### CMake: other platforms and optional tools
+
+Requires a C++17 compiler, CMake 3.21+, Ninja, and GMP development headers/library.
+Use a GMP build compatible with your compiler and architecture.
+
+**Windows, MSYS2 MINGW64 terminal:**
+
+```sh
+pacman -S --needed mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-gmp
+cmake --preset release
+cmake --build --preset release
+./build/release/pitime.exe --digits 10000
+```
+
+Keep `C:\msys64\mingw64\bin` on `PATH` when running this build from PowerShell;
+it supplies GMP and the compiler's runtime DLLs. This is the optional MinGW build;
+the Visual Studio solution above uses native MSVC and restores its own compatible
+GMP library. Do not mix the two compiler toolchains' libraries.
+
+**Ubuntu/Debian:**
+
+```sh
+sudo apt install g++ cmake ninja-build libgmp-dev
+cmake --preset release
+cmake --build --preset release
+```
+
+**macOS:**
+
+```sh
+brew install cmake ninja gmp
+cmake --preset release -DGMP_ROOT="$(brew --prefix gmp)"
+cmake --build --preset release
+```
+
+For a custom installation, pass `-DGMP_ROOT=/path/to/prefix`, or set
+`GMP_INCLUDE_DIR` and `GMP_LIBRARY` explicitly. `release` enables compiler
+optimization and link-time optimization when supported. `debug` is for debugging;
+`native` additionally permits GCC/Clang to tune instructions for the build machine.
+Native binaries may require that CPU. No fast-math flags are used.
+The default CMake build also builds only the application and its core library.
+Tests and benchmarks are separate opt-in targets, including when CMake generates
+a Visual Studio solution.
+
+## Run
+
+```sh
+./build/release/pitime                         # 10,000 decimal places
+./build/release/pitime --digits 1000000 --quiet
+./build/release/pitime --digits 1000000 --output pi.txt
+./build/release/pitime --digits 1000000 --threads 1 --quiet
+```
+
+Digits go to stdout, or to `--output FILE` (replacing that file). Timing goes to
+stderr and includes calculation, allocation, and decimal conversion, excluding
+terminal/file I/O. `--quiet` suppresses stdout digits but still calculates the
+entire result. `--threads 0` selects an automatic worker limit; small jobs stay
+serial to avoid launch overhead. `--threads 1` forces serial execution. The worker
+limit accepts 0–256 and precision accepts 0–100,000,000. Zero digits returns `3.`.
+The upper limit is a resource guard, not a promise that every machine has enough
+memory for that size; GMP's allocation failure behavior applies.
+
+## Verify and benchmark
+
+```sh
+cmake --build --preset release-tests
+ctest --preset release
+cmake --build --preset release-benchmark
+./build/release/pitime_benchmark --digits 10000 --samples 7 --threads 1 --csv build/comparison.csv
+./build/release/pitime_benchmark --digits 1000000 --samples 7 --threads 0 --optimized-only
+```
+
+Correctness tests independently compute all 10,000 digits with Machin's formula
+and check precision boundaries, long runs of nines, argument validation, file
+output, and parallel consistency. The benchmark compiles both preserved originals
+with the same Release options, checks their entire result against the new core,
+and measures in-process calculation without console or process-start overhead.
+See [benchmark details](benchmarks/README.md) for interpretation and limitations.
+Equivalent `debug-tests`, `native-tests`, `debug-benchmark`, and
+`native-benchmark` build presets are available after configuring those presets.
+
+## Layout
+
+```text
+include/pitime/   Public calculation API
+src/             Calculation implementation and command-line application
+tests/           Independent numeric oracle and CLI contract checks
+benchmarks/      Harness and original baselines with formatting changes only
+cmake/           Dependency discovery
+ide/visual-studio/ Native Visual Studio application project
+docs/            Algorithm rationale and measured performance
+build/           Generated files and local experiments (ignored)
+```
+
+The dependency is the [GNU MP library](https://gmplib.org/), distributed separately
+under its own license. No GMP source or binaries are vendored. When redistributing
+binaries, follow the licensing requirements of the GMP build you distribute.

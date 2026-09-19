@@ -1,0 +1,68 @@
+name: build-and-test
+on: [push, pull_request]
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y libgmp-dev ninja-build
+      - run: cmake --preset release -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+      - run: cmake --build --preset release-tests
+      - run: cmake --build --preset release-benchmark
+      - run: ctest --preset release
+      - name: Address and undefined-behavior sanitizers
+        run: |
+          cmake -S . -B build/sanitize -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DPITIME_ENABLE_IPO=OFF -DPITIME_BUILD_BENCHMARKS=OFF -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+          cmake --build build/sanitize --target pitime pitime_tests
+          ctest --test-dir build/sanitize --output-on-failure
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-gmp
+      - run: cmake --preset release
+      - run: cmake --build --preset release-tests
+      - run: cmake --build --preset release-benchmark
+      - run: ctest --preset release
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install ninja gmp
+      - run: cmake --preset release -DGMP_ROOT="$(brew --prefix gmp)"
+      - run: cmake --build --preset release-tests
+      - run: cmake --build --preset release-benchmark
+      - run: ctest --preset release
+
+  visual-studio:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the application solution with automatic GMP restore
+        shell: pwsh
+        run: ./Build.ps1 -NonInteractive -Configuration Release
+      - name: Run without external GMP on PATH
+        shell: pwsh
+        run: |
+          $application = (Resolve-Path 'build/visual-studio/x64/Release/PiTime.exe').Path
+          $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+          $digits = & $application --digits 10
+          if ($LASTEXITCODE -ne 0 -or $digits -ne '3.1415926535') { throw 'Application launch failed' }
+          if (Get-ChildItem 'build/visual-studio' -Recurse -Filter '*test*.exe') { throw 'Application solution built tests unexpectedly' }
